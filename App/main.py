@@ -1,14 +1,23 @@
 # Todo: Import node data and use that to create a graph. Use an adjacency matrix to store distances between nodes.
+zones = {}
+zones.update(dict.fromkeys(["84104", "84103", "84111", "84102"], "North"))
+zones.update(dict.fromkeys(["84124", "84117", "84107", "84121"], "South"))
+zones.update(dict.fromkeys(["84115", "84106", "84105"], "East"))
+zones.update(dict.fromkeys(["84119", "84129", "84123", "84118"], "West"))
+
 
 class Node:
     name = None
     address = None
     node_id = None
+    zone = None
 
     def __init__(self, name="", address="", node_id=0):
         self.name = name
         self.address = address
         self.node_id = node_id
+        zip_start = address.index("(") + 1
+        self.zone = str(zones[address[zip_start: zip_start + 5]])
 
 
 class Graph:
@@ -89,6 +98,10 @@ def print_matrix(matrix):
 
 # Todo: Implement greedy algorithm to calculate a decent route.
 
+def calculate_route(locations, packages):
+    pass
+
+
 # Todo: Implement a user interface that allows the user to see the route progression at any given time.
 
 if __name__ == '__main__':
@@ -96,4 +109,4 @@ if __name__ == '__main__':
     location_graph = load_location_data("locations_csv.csv")
     # print_matrix(location_graph.adj_matrix)
     for i, node in enumerate(location_graph.node_list):
-        print(node.name + " - " + node.address + " | ")
+        print(node.name + " - " + node.address + " | " + node.zone)
