@@ -1,4 +1,5 @@
 import math
+import datetime
 
 # Todo: Import node data and use that to create a graph. Use an adjacency matrix to store distances between nodes.
 zones = {}
@@ -8,6 +9,7 @@ zones.update(dict.fromkeys(["84115", "84106", "84105"], "East"))
 zones.update(dict.fromkeys(["84119", "84129", "84123", "84118"], "West"))
 
 MINS_SINCE_MIDNIGHT = 480
+global_time = 1349
 
 
 class Node:
@@ -71,9 +73,10 @@ class Package:
         self.zone = zones[zip_code]
 
     def __str__(self):
-        return str(str(self.package_id) + "\t" + self.address + "\t" + self.city + ", " + self.state + "\t" +
-                   self.zip_code + "\t" + str(self.deadline) + "\t" + str(self.mass_kilo) + "\t" +
-                   self.special_notes + "\t" + str(self.zone))
+        return str("Package ID: " + str(self.package_id) + "\t\tAddress: " + self.address + " - " + self.city + ", " +
+                   self.state + " " + self.zip_code + "\t\tDeadline: " + str(datetime.time(self.deadline // 60,
+                   self.deadline % 60).strftime("%H:%M")) + "\t\tWeight: " + str(self.mass_kilo) + " k" +
+                   "\t\tStatus: " + str(self.status))
 
 
 class Truck:
@@ -100,11 +103,12 @@ class Truck:
         self.miles_driven += distance
         if distance > 0:
             self.curr_time += math.ceil((distance / self.AVG_SPEED) * 60)
-        if location.node_id != 0:
-            print("Package delivered at: " + str(self.curr_time // 60) + ":" + str(
-                self.curr_time % 60) + " By truck " + str(self.truck_id))
-        else:
-            print("Truck " + str(self.truck_id) + " is back at the HUB.")
+        # if location.node_id != 0:
+        #     pass
+            # print("Package delivered at: " + str(self.curr_time // 60) + ":" + str(
+            #     self.curr_time % 60) + " By truck " + str(self.truck_id))
+        # else:
+        #     print("Truck " + str(self.truck_id) + " is back at the HUB.")
 
     def deliver_package(self):
         closest_index = 0
@@ -116,9 +120,9 @@ class Truck:
                 closest_index = i
 
         package = self.on_board.pop(closest_index)
-        print("Deadline for package: " + str(package.package_id) + " - " + str(package.deadline // 60) + ":" + str(package.deadline % 60))
         self.goto_location(self.road_map.node_list[self.road_map.find_node_id(package.address)])
         self.delivered.append(package)
+        package.status = "Delivered at: " + str(datetime.time(int(self.curr_time / 60), (self.curr_time % 60) - 1).strftime("%H:%M"))
 
 
 def load_package_data(filename):
@@ -229,6 +233,8 @@ def load_truck(truck, packages):
             else:
                 index += 1
     truck.on_board = payload
+    for package in payload:
+        package.status = "Out for Delivery"
 
 
 def sort_packages_by_deadline(packages):
@@ -238,20 +244,49 @@ def sort_packages_by_deadline(packages):
                 packages[i], packages[j] = packages[j], packages[i]
 
 
+def sort_packages_by_id(packages):
+    for i in range(len(packages)):
+        for j in range(i + 1, len(packages)):
+            if int(packages[j].package_id) < int(packages[i].package_id):
+                packages[i], packages[j] = packages[j], packages[i]
+
+
 # Todo: Implement a user interface that allows the user to see the route progression at any given time.
+def display_menu():
+    print("Enter the current simulated time in the 24-hour format HH:MM")
+    user_input = input()
+    global global_time
+    global_time = int(user_input.split(":")[0]) * 60 + int(user_input.split(":")[1])
+    pkgs = simulate_to_time(global_time)
+    while user_input != "q" and user_input != "Q":
+        print("Select from the following:")
+        print("[L]ookup package by ID")
+        print("[P]rint all packages")
+        print("[S]et current time")
+        print("[Q]uit")
+        user_input = input()
+        if user_input == "L" or user_input == "l":
+            print("Enter a package ID to lookup")
+            l_input = int(input())
+            print(str(pkgs[l_input - 1]))
+            pass
+        elif user_input == "P" or user_input == "p":
+            for package in pkgs:
+                print(str(package))
+        elif user_input == "S" or user_input == "s":
+            print("Enter the current simulated time in the 24-hour format HH:MM")
+            s_input = input()
+            global_time = int(s_input.split(":")[0]) * 60 + int(s_input.split(":")[1])
+            pkgs = simulate_to_time(global_time)
 
 
-if __name__ == '__main__':
-    packages = load_package_data("packages_csv.csv")
-    location_graph = load_location_data("locations_csv.csv")
+def simulate_to_time(time):
     sort_packages_by_deadline(packages)
-    # load_truck(location_graph, packages)
-    # print_packages(packages)
-    curr_time_one = MINS_SINCE_MIDNIGHT
-    curr_time_two = MINS_SINCE_MIDNIGHT
     truck_one = Truck(1, [], location_graph)
     truck_two = Truck(2, [], location_graph)
     while len(packages) > 0 or len(truck_one.on_board) > 0 or len(truck_two.on_board) > 0:
+        if global_time < truck_one.curr_time or global_time < truck_two.curr_time:
+            break
         if len(truck_one.on_board) == 0 and len(packages) > 0:
             if truck_one.curr_location != location_graph.node_list[0]:
                 truck_one.goto_location(location_graph.node_list[0])
@@ -264,7 +299,18 @@ if __name__ == '__main__':
             truck_one.deliver_package()
         if len(truck_two.on_board) > 0 and truck_two.curr_time <= truck_one.curr_time or len(truck_two.on_board) == 1:
             truck_two.deliver_package()
-    truck_one.goto_location(location_graph.node_list[0])
-    truck_two.goto_location(location_graph.node_list[0])
-
+    out_packages = []
+    out_packages.extend(truck_one.delivered)
+    out_packages.extend(truck_one.on_board)
+    out_packages.extend(truck_two.delivered)
+    out_packages.extend(truck_two.on_board)
+    out_packages.extend(packages)
+    sort_packages_by_id(out_packages)
     print("Total miles driven = " + str(truck_one.miles_driven + truck_two.miles_driven))
+    return out_packages
+
+
+if __name__ == '__main__':
+    packages = load_package_data("packages_csv.csv")
+    location_graph = load_location_data("locations_csv.csv")
+    display_menu()
