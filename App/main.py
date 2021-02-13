@@ -1,9 +1,13 @@
+import math
+
 # Todo: Import node data and use that to create a graph. Use an adjacency matrix to store distances between nodes.
 zones = {}
 zones.update(dict.fromkeys(["84104", "84103", "84111", "84102"], "North"))
 zones.update(dict.fromkeys(["84124", "84117", "84107", "84121"], "South"))
 zones.update(dict.fromkeys(["84115", "84106", "84105"], "East"))
 zones.update(dict.fromkeys(["84119", "84129", "84123", "84118"], "West"))
+
+MINS_SINCE_MIDNIGHT = 480
 
 
 class Node:
@@ -28,34 +32,93 @@ class Graph:
         self.node_list = node_list
         self.adj_matrix = adj_matrix
 
+    def get_node(self, node_id):
+        return self.node_list[node_id]
+
+    def find_node_id(self, address):
+        node_id = 0
+        for node in self.node_list:
+            if address in node.address:
+                return node.node_id
+
 
 # Todo: Import package data. Make every package an object.
 class Package:
     package_id = None
     address = None
+    node_id = None
     city = None
     state = None
     zip_code = None
-    delivery_deadline = None
+    zone = None
+    deadline = None
     mass_kilo = None
     special_notes = None
     status = "Holding"
 
-    def __init__(self, package_id="", address="", city="", state="", zip_code="", delivery_deadline="",
+    def __init__(self, package_id="", address="", city="", state="", zip_code="", deadline="",
                  mass_kilo="", special_notes=""):
         self.package_id = package_id
         self.address = address
         self.city = city
         self.state = state
         self.zip_code = zip_code
-        self.delivery_deadline = delivery_deadline
+        if deadline == "EOD":
+            deadline = "23:59"
+        self.deadline = int(deadline.split(":")[0]) * 60 + int(deadline.split(":")[1])
         self.mass_kilo = mass_kilo
         self.special_notes = special_notes
+        self.zone = zones[zip_code]
 
     def __str__(self):
         return str(str(self.package_id) + "\t" + self.address + "\t" + self.city + ", " + self.state + "\t" +
-                   self.zip_code + "\t" + self.delivery_deadline + "\t" + str(self.mass_kilo) + "\t" +
-                   self.special_notes + "\t" + str(self.status))
+                   self.zip_code + "\t" + str(self.deadline) + "\t" + str(self.mass_kilo) + "\t" +
+                   self.special_notes + "\t" + str(self.zone))
+
+
+class Truck:
+    truck_id = None
+    AVG_SPEED = 18
+    MAX_PAYLOAD = 16
+    miles_driven = 0
+    curr_time = MINS_SINCE_MIDNIGHT
+    road_map = None
+    curr_location = None
+    on_board = []
+    delivered = []
+
+    def __init__(self, truck_id, on_board, road_map):
+        self.truck_id = truck_id
+        self.on_board = on_board
+        self.delivered = []
+        self.road_map = road_map
+        self.curr_location = road_map.node_list[0]
+
+    def goto_location(self, location):
+        distance = self.road_map.adj_matrix[self.curr_location.node_id][location.node_id]
+        self.curr_location = location
+        self.miles_driven += distance
+        if distance > 0:
+            self.curr_time += math.ceil((distance / self.AVG_SPEED) * 60)
+        if location.node_id != 0:
+            print("Package delivered at: " + str(self.curr_time // 60) + ":" + str(
+                self.curr_time % 60) + " By truck " + str(self.truck_id))
+        else:
+            print("Truck " + str(self.truck_id) + " is back at the HUB.")
+
+    def deliver_package(self):
+        closest_index = 0
+        for i in range(1, len(self.on_board)):
+            currnode = self.curr_location.node_id
+            nextnode = self.road_map.find_node_id(self.on_board[i].address)
+            dist = self.road_map.adj_matrix[currnode][nextnode]
+            if dist < self.road_map.adj_matrix[self.curr_location.node_id][self.road_map.find_node_id(self.on_board[closest_index].address)]:
+                closest_index = i
+
+        package = self.on_board.pop(closest_index)
+        print("Deadline for package: " + str(package.package_id) + " - " + str(package.deadline // 60) + ":" + str(package.deadline % 60))
+        self.goto_location(self.road_map.node_list[self.road_map.find_node_id(package.address)])
+        self.delivered.append(package)
 
 
 def load_package_data(filename):
@@ -85,7 +148,7 @@ def load_location_data(filename):
             graph.adj_matrix.append([])
             for i, col in enumerate(node_info):
                 if i > 1:
-                    graph.adj_matrix[index].append(node_info[i])
+                    graph.adj_matrix[index].append(float(node_info[i]))
     return graph
 
 
@@ -96,17 +159,112 @@ def print_matrix(matrix):
         print("")
 
 
+def print_packages(packages):
+    for package in packages:
+        print(package)
+
+
 # Todo: Implement greedy algorithm to calculate a decent route.
 
-def calculate_route(locations, packages):
-    pass
+def load_truck(truck, packages):
+    payload = []
+    index = 0
+    zone = ""
+    while len(packages) > 0:
+        if index >= len(packages):
+            if packages[0].deadline == 1439 and zone != "":
+                index = 0
+                zone = ""
+                continue
+            break
+        if len(payload) == truck.MAX_PAYLOAD:
+            break
+        else:
+            # Check and see if the current package is a member of a set
+            if "set" in packages[index].special_notes:
+                set_id = packages[index].special_notes.split()[-1]
+                set_count = 0
+                for package in packages:
+                    if "set " + set_id in package.special_notes:
+                        set_count += 1
+                if len(payload) + set_count <= truck.MAX_PAYLOAD:
+                    i = 0
+                    while i < len(packages):
+                        if "set " + set_id in packages[i].special_notes:
+                            if zone == "":
+                                zone = packages[i].zone
+                            payload.append(packages.pop(i))
+                            continue
+                        else:
+                            i += 1
+                    continue
+            # Check and see if package is restricted to certain truck
+            elif "Restricted" in packages[index].special_notes:
+                if truck.truck_id == int(packages[index].special_notes.split()[-1]):
+                    if zone == "" or zone == packages[index].zone:
+                        zone = packages[index].zone
+                        payload.append(packages.pop(index))
+                        continue
+                    else:
+                        index += 1
+                else:
+                    index += 1
+                    continue
+            # Check and see if package is delayed
+            elif "Delayed" in packages[index].special_notes:
+                time_delay = int(int(packages[index].special_notes.split()[-1].split(":")[0]) * 60) + int(packages[index].special_notes.split()[-1].split(":")[1])
+                if truck.curr_time >= time_delay:
+                    if zone == "" or zone == packages[index].zone:
+                        zone = packages[index].zone
+                        payload.append(packages.pop(index))
+                        continue
+                    else:
+                        index += 1
+                else:
+                    index += 1
+                    continue
+            elif zone == "" or zone == packages[index].zone:
+                zone = packages[index].zone
+                payload.append(packages.pop(index))
+            else:
+                index += 1
+    truck.on_board = payload
+
+
+def sort_packages_by_deadline(packages):
+    for i in range(len(packages)):
+        for j in range(i + 1, len(packages)):
+            if packages[j].deadline < packages[i].deadline:
+                packages[i], packages[j] = packages[j], packages[i]
 
 
 # Todo: Implement a user interface that allows the user to see the route progression at any given time.
 
+
 if __name__ == '__main__':
     packages = load_package_data("packages_csv.csv")
     location_graph = load_location_data("locations_csv.csv")
-    # print_matrix(location_graph.adj_matrix)
-    for i, node in enumerate(location_graph.node_list):
-        print(node.name + " - " + node.address + " | " + node.zone)
+    sort_packages_by_deadline(packages)
+    # load_truck(location_graph, packages)
+    # print_packages(packages)
+    curr_time_one = MINS_SINCE_MIDNIGHT
+    curr_time_two = MINS_SINCE_MIDNIGHT
+    truck_one = Truck(1, [], location_graph)
+    truck_two = Truck(2, [], location_graph)
+    while len(packages) > 0 or len(truck_one.on_board) > 0 or len(truck_two.on_board) > 0:
+        if len(truck_one.on_board) == 0 and len(packages) > 0:
+            if truck_one.curr_location != location_graph.node_list[0]:
+                truck_one.goto_location(location_graph.node_list[0])
+            load_truck(truck_one, packages)
+        if len(truck_two.on_board) == 0 and len(packages) > 0:
+            if truck_two.curr_location != location_graph.node_list[0]:
+                truck_two.goto_location(location_graph.node_list[0])
+            load_truck(truck_two, packages)
+        if len(truck_one.on_board) > 0 and truck_one.curr_time <= truck_two.curr_time or len(truck_one.on_board) == 1:
+            truck_one.deliver_package()
+        if len(truck_two.on_board) > 0 and truck_two.curr_time <= truck_one.curr_time or len(truck_two.on_board) == 1:
+            truck_two.deliver_package()
+    truck_one.goto_location(location_graph.node_list[0])
+    truck_two.goto_location(location_graph.node_list[0])
+
+    print("Total miles driven = " + str(truck_one.miles_driven + truck_two.miles_driven))
