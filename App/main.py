@@ -23,7 +23,7 @@ def load_truck(truck, packages):
         if len(truck.payload.keys) == truck.MAX_PAYLOAD:
             break
         else:
-            # Check and see if the current package is a member of a set
+            # Check if the current package is a member of a set
             if "set" in packages.find(packages.keys[index]).value.special_notes:
                 set_id = packages.find(packages.keys[index]).value.special_notes.split()[-1]
                 set_count = 0
@@ -41,7 +41,7 @@ def load_truck(truck, packages):
                         else:
                             i += 1
                     continue
-            # Check and see if package is restricted to certain truck
+            # Check if package is restricted to certain truck
             elif "Restricted" in packages.find(packages.keys[index]).value.special_notes:
                 if truck.truck_id == int(packages.find(packages.keys[index]).value.special_notes.split()[-1]):
                     if zone == "" or zone == packages.find(packages.keys[index]).value.zone:
@@ -53,7 +53,7 @@ def load_truck(truck, packages):
                 else:
                     index += 1
                     continue
-            # Check and see if package is delayed
+            # Check if package is delayed
             elif "Delayed" in packages.find(packages.keys[index]).value.special_notes:
                 time_delay = int(
                     int(packages.find(packages.keys[index]).value.special_notes.split()[-1].split(":")[0]) * 60) \
@@ -117,7 +117,19 @@ def start():
     locations = dataloader.load_location_data("locations_csv.csv")
     time_input = input("Enter the simulated current time in the 24-hour format HH:MM\n")
     global global_time
-    global_time = int(time_input.split(":")[0]) * 60 + int(time_input.split(":")[1])
+    try:
+        global_time = int(time_input.split(":")[0]) * 60 + int(time_input.split(":")[1])
+        if int(time_input.split(":")[0]) > 23 or int(time_input.split(":")[1]) > 59 or \
+                int(time_input.split(":")[0]) < 0 or int(time_input.split(":")[1]) < 0:
+            raise ValueError("Time out of range")
+    except ValueError:
+        input("Error: Invalid time\nPress ENTER to continue")
+        start()
+        return None
+    except IndexError:
+        input("Error: Invalid time\nPress ENTER to continue")
+        start()
+        return None
     return simulate_to_curr_time(packages, locations)
 
 
@@ -127,17 +139,22 @@ if __name__ == '__main__':
     user_input = ""
     while user_input != "q" and user_input != "Q":
         print("Select from the following:")
-        print("[L]ookup package by ID")
-        print("[P]rint all packages")
-        print("[S]et current time")
-        print("[Q]uit")
+        print("[L] - Lookup package by ID")
+        print("[P] - Print all packages")
+        print("[S] - Set current time")
+        print("[Q] - Quit")
         user_input = input()
         if user_input == "L" or user_input == "l":
-            print(str(main_packages.find(input("Enter a package ID to lookup\n")).value))
+            user_input = input("Enter a package ID to lookup\n")
+            if main_packages.keys.count(user_input) == 0:
+                input("Error: A package with that ID does not exist in the database\nPress ENTER to continue\n")
+                continue
+            print(str(main_packages.find(user_input).value))
         elif user_input == "P" or user_input == "p":
             for key in main_packages.keys:
                 print(str(main_packages.find(key).value))
+            input("Press ENTER to continue\n")
         elif user_input == "S" or user_input == "s":
             main_packages = start()
         else:
-            print("Error: Invalid input")
+            input("Error: Invalid input\nPress ENTER to continue\n")

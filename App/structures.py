@@ -10,7 +10,7 @@ class HashTable:
         self.buckets = []
         self.keys = []
         for i in range(init_capacity):
-            self.buckets.append([])
+            self.buckets.append([HashNode(None, None)])
 
     def hash(self, key):
         return int(key) % self.capacity
@@ -19,6 +19,9 @@ class HashTable:
         self.size += 1
         index = self.hash(key)
         self.keys.append(key)
+        # self.buckets[index].append(HashNode)
+        # self.buckets[index][-1].key = key
+        # self.buckets[index][-1].value = value
         self.buckets[index].append(HashNode(key, value))
 
     def insert_all(self, other):
@@ -57,15 +60,18 @@ class HashTable:
 
 
 class HashNode:
+    key = None
+    value = None
+
     def __init__(self, key, value):
         self.key = key
         self.value = value
 
 
 class Graph:
-    def __init__(self, node_list, adj_matrix):
-        self.node_list = node_list
-        self.adj_matrix = adj_matrix
+    def __init__(self):
+        self.node_list = []
+        self.adj_matrix = [[]]
 
     def get_node(self, node_id):
         return self.node_list[node_id]
@@ -92,7 +98,7 @@ class Package:
         self.state = state
         self.zip_code = zip_code
         if deadline == "EOD":
-            deadline = "23:59"
+            deadline = str(local.SHIFT_END_TIME // 60) + ":" + str(local.SHIFT_END_TIME % 60)
         self.deadline = int(deadline.split(":")[0]) * 60 + int(deadline.split(":")[1])
         self.mass_kilo = mass_kilo
         self.special_notes = special_notes
@@ -140,12 +146,11 @@ class Truck:
         closest_key_index = 0
         for i in range(1, len(self.payload.keys)):
             curr_node = self.curr_location.node_id
-            next_address = self.payload.find(self.payload.keys[i]).value.address
-            next_node = self.road_map.find_node_id(next_address)
+            next_node = self.road_map.find_node_id(self.payload.find(self.payload.keys[i]).value.address)
             dist = self.road_map.adj_matrix[curr_node][next_node]
-            whoKnows = self.road_map.find_node_id(
+            next_node_id = self.road_map.find_node_id(
                 self.payload.find(self.payload.keys[closest_key_index]).value.address)
-            if dist < self.road_map.adj_matrix[self.curr_location.node_id][whoKnows]:
+            if dist < self.road_map.adj_matrix[self.curr_location.node_id][next_node_id]:
                 closest_key_index = i
 
         package = self.payload.remove(self.payload.keys[closest_key_index])

@@ -1,10 +1,9 @@
 import structures
 
 
+# Open file, read packages one line at a time, create package objects and insert them into a hash table.
+# Return the hash table once the entire file is processed.
 def load_package_data(filename):
-    # Open file, read packages one line at a time,
-    # create package objects and append them to a list.
-    # Return the list once the entire file is processed.
     package_hash = structures.HashTable(40)
     with open(filename) as package_data:
         lines = package_data.readlines()
@@ -16,11 +15,10 @@ def load_package_data(filename):
     return package_hash
 
 
+# Open file, read locations one line at a time. Create a Graph object containing a list of
+# locations and an adjacency matrix representing distances between locations. Populate and return graph.
 def load_location_data(filename):
-    # Open file, read locations one line at a time,
-    # Create a Graph object initialized with a node_list and adjacency matrix.
-    # Populate and return graph.
-    graph = structures.Graph([], [[]])
+    graph = structures.Graph()
     with open(filename) as node_data:
         lines = node_data.readlines()
         for index, line in enumerate(lines):
