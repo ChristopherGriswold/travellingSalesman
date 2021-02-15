@@ -2,7 +2,8 @@ import structures
 
 
 # Open file, read packages one line at a time, create package objects and insert them into a hash table.
-# Return the hash table once the entire file is processed.
+# Return the hash table once the entire file is processed. Time complexity: O(n) where n is the number of
+# lines in the file. Auxiliary space complexity: O(1)
 def load_package_data(filename):
     package_hash = structures.HashTable(40)
     with open(filename) as package_data:
@@ -17,6 +18,7 @@ def load_package_data(filename):
 
 # Open file, read locations one line at a time. Create a Graph object containing a list of
 # locations and an adjacency matrix representing distances between locations. Populate and return graph.
+# Time complexity: O(n) where n is the number of lines in the file. Auxiliary space complexity: O(1)
 def load_location_data(filename):
     graph = structures.Graph()
     with open(filename) as node_data:

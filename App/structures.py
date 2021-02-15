@@ -1,33 +1,55 @@
-import datetime
 import local
+import datetime
 import math
+from typing import List
 
 
+# Used by a hash table to store key-value pairs.
+class HashNode:
+    key = None
+    value = None
+
+    def __init__(self, key, value):
+        self.key = key
+        self.value = value
+
+
+# A self-adjusting data structure that utilizes a simple modulo hash function along with chaining collision handling
+# to store key-value pairs in a two-dimensional list. Along with typical insert, remove and find operations this
+# implementation includes additional sorting and merging functionality.
 class HashTable:
+    buckets: List[List[HashNode]]
+
     def __init__(self, init_capacity):
         self.capacity = init_capacity
         self.size = 0
         self.buckets = []
         self.keys = []
         for i in range(init_capacity):
-            self.buckets.append([HashNode(None, None)])
+            self.buckets.append([])
 
+    # Using the provided key, generate an index to the bucket list that will store a node
+    # containing the key-value pair.
     def hash(self, key):
         return int(key) % self.capacity
 
+    # Insert the key-value pair into the hash table and append the key to the key list. This operation is
+    # done in constant O(1) time and auxiliary space.
     def insert(self, key, value):
         self.size += 1
         index = self.hash(key)
         self.keys.append(key)
-        # self.buckets[index].append(HashNode)
-        # self.buckets[index][-1].key = key
-        # self.buckets[index][-1].value = value
         self.buckets[index].append(HashNode(key, value))
 
-    def insert_all(self, other):
+    # Insert all elements from the other hash table into this one. This operation is
+    # done in linear O(n) time and constant O(1) auxiliary space.
+    def merge(self, other):
         while len(other.keys) > 0:
             self.insert(other.keys[0], other.remove(other.keys[0]).value)
 
+    # Find the node in the hash table corresponding to the provided key and return it. This operation
+    # is done in linear O(n) time, where n is the number of elements contained in the table with the
+    # same hash value. Auxiliary space complexity is O(1)
     def find(self, key):
         index = self.hash(key)
         for hash_node in self.buckets[index]:
@@ -35,6 +57,10 @@ class HashTable:
                 return hash_node
         return None
 
+    # Find and remove the node in the hash table corresponding to the provided key and return it.
+    # The key is also removed from the key list. This operation is done in linear O(n) time,
+    # where n is the number of elements contained in the table with the same hash value.
+    # Auxiliary space complexity is O(1)
     def remove(self, key):
         index = self.hash(key)
         for hash_node in self.buckets[index]:
@@ -59,29 +85,7 @@ class HashTable:
         return self.keys
 
 
-class HashNode:
-    key = None
-    value = None
-
-    def __init__(self, key, value):
-        self.key = key
-        self.value = value
-
-
-class Graph:
-    def __init__(self):
-        self.node_list = []
-        self.adj_matrix = [[]]
-
-    def get_node(self, node_id):
-        return self.node_list[node_id]
-
-    def find_node_id(self, address):
-        for node in self.node_list:
-            if address in node.address:
-                return node.node_id
-
-
+# Used by a graph to store relevant location data.
 class GraphNode:
     def __init__(self, name="", address="", node_id=0):
         self.name = name
@@ -89,6 +93,25 @@ class GraphNode:
         self.node_id = node_id
 
 
+# Stores a list of nodes representing map locations and the driving distances between each
+# in the form of an adjacency matrix.
+class Graph:
+    def __init__(self):
+        self.node_list = []
+        self.adj_matrix = [[]]
+
+    # Given a valid node_id, returns the corresponding node from the node list.
+    def get_node(self, node_id):
+        return self.node_list[node_id]
+
+    # Given a valid address, returns the id of the node containing the address.
+    def find_node_id(self, address):
+        for node in self.node_list:
+            if address in node.address:
+                return node.node_id
+
+
+# Stores all information regarding a delivery package.
 class Package:
     def __init__(self, package_id="", address="", city="", state="", zip_code="", deadline="",
                  mass_kilo="", special_notes=""):
@@ -105,6 +128,7 @@ class Package:
         self.zone = local.zones[zip_code]
         self.status = "On schedule"
 
+    # Returns a string representation of the package for use within the UI as a reporting mechanism.
     def __str__(self):
         return str("Package ID: " + str(self.package_id) + "\t\tAddress: " + self.address + " - " + self.city + ", " +
                    self.state + " " + self.zip_code + "\t\tDeadline: " +
@@ -112,6 +136,8 @@ class Package:
                    str(self.mass_kilo) + " k" + "\t\tStatus: " + str(self.status))
 
 
+# A representation of a package delivery truck that includes functionality to navigate between
+# location nodes and load/deliver packages.
 class Truck:
     AVG_SPEED = 18
     MAX_PAYLOAD = 16
@@ -125,6 +151,8 @@ class Truck:
         self.miles_driven = 0
         self.curr_time = local.SHIFT_START_TIME
 
+    # Changes the status of all packages on board to reflect the fact that they are now out for delivery.
+    # Time complexity is O(n), where n is the number of packages on board. Auxiliary space complexity is O(1).
     def load(self, package):
         if len(self.payload.keys) < self.MAX_PAYLOAD:
             package.status = "Out for delivery"
@@ -133,6 +161,7 @@ class Truck:
         else:
             return False
 
+    # Navigate to the delivery location and update the truck's miles driven and time taken.
     def goto_location(self, location):
         distance = self.road_map.adj_matrix[self.curr_location.node_id][location.node_id]
         self.curr_location = location
@@ -140,6 +169,8 @@ class Truck:
         if distance > 0:
             self.curr_time += math.ceil((distance / self.AVG_SPEED) * 60)
 
+    # Identifies the package with the nearest delivery address and delivers it. This operation happens
+    # in linear O(n) time, where n is the number of packages on board. Auxiliary space complexity is O(1).
     def deliver_package(self):
         if len(self.payload.keys) == 0:
             return

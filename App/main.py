@@ -1,15 +1,57 @@
+# Christopher Griswold - 001164982
+# Note: Unless otherwise stated, all methods are understood to require constant O(1) time and auxiliary space.
 import structures
 import dataloader
 
-# Times are represented internally as the number of minutes since midnight. 1349 is
-# representative of 23:59 or End-Of-Day (EOD).
-global_time = 1349
-global_status_msg = "Some packages are still en route."
+# Variables used throughout the program to represent the simulated current time and
+# the overall status of the day's packages.
+global_time = 0
+global_status_msg = ""
 
 
-# A simple greedy algorithm that loads a truck with the preference of keeping packages destined for the same
-# zone together. A truck will not load packages destined for different zones unless all priority packages have
-# been delivered or as required by a package's special-notes.
+# Orchestrates the entire truck loading and delivery operation. Simulate the passage of time by continuously
+# checking to see if the time that both trucks have been in service is less than the simulated current time,
+# as specified by the user. As soon as the the simulated current time is reached all truck loading and
+# delivery operations cease and a full report is made available.
+# Time complexity: O(n). Auxiliary space complexity: O(n).
+def simulate_to_curr_time(packages, locations):
+    packages.sort_keys("deadline")
+    truck_one = structures.Truck(1, locations)
+    truck_two = structures.Truck(2, locations)
+    while len(packages.keys) > 0 or len(truck_one.payload.keys) > 0 or len(truck_two.payload.keys) > 0:
+        if global_time <= truck_one.curr_time or global_time <= truck_two.curr_time:
+            break
+        if len(truck_one.payload.keys) == 0 and len(packages.keys) > 0:
+            if truck_one.curr_location != locations.node_list[0]:
+                truck_one.goto_location(locations.node_list[0])
+            load_truck(truck_one, packages)
+        if len(truck_two.payload.keys) == 0 and len(packages.keys) > 0:
+            if truck_two.curr_location != locations.node_list[0]:
+                truck_two.goto_location(locations.node_list[0])
+            load_truck(truck_two, packages)
+        if truck_one.curr_time <= truck_two.curr_time or len(truck_one.payload.keys) == 1:
+            truck_one.deliver_package()
+        else:
+            truck_two.deliver_package()
+    global global_status_msg
+    if len(packages.keys) == 0 and len(truck_one.payload.keys) == 0 and len(truck_two.payload.keys) == 0:
+        global_status_msg = "Status: All packages have been delivered on schedule."
+    out_packages = structures.HashTable(40)
+    out_packages.merge(truck_one.delivered)
+    out_packages.merge(truck_one.payload)
+    out_packages.merge(truck_two.delivered)
+    out_packages.merge(truck_two.payload)
+    out_packages.merge(packages)
+    out_packages.sort_keys("package_id")
+    print(global_status_msg)
+    print("Total miles driven = " + str(truck_one.miles_driven + truck_two.miles_driven))
+    return out_packages
+
+
+# A simple greedy algorithm that loads a truck with the preference of keeping packages destined
+# for the same zone together. A truck will not load packages destined for different zones unless
+# all priority packages have been delivered or as required by a package's special-notes.
+# Time complexity: O(n). Auxiliary space complexity O(1).
 def load_truck(truck, packages):
     index = 0
     zone = ""
@@ -68,45 +110,12 @@ def load_truck(truck, packages):
                 else:
                     index += 1
                     continue
+            # Check if package is going to the same zone as the other packages on the truck
             elif zone == "" or zone == packages.find(packages.keys[index]).value.zone:
                 zone = packages.find(packages.keys[index]).value.zone
                 truck.load(packages.remove(packages.keys[index]).value)
             else:
                 index += 1
-
-
-def simulate_to_curr_time(packages, locations):
-    packages.sort_keys("deadline")
-    truck_one = structures.Truck(1, locations)
-    truck_two = structures.Truck(2, locations)
-    while len(packages.keys) > 0 or len(truck_one.payload.keys) > 0 or len(truck_two.payload.keys) > 0:
-        if global_time <= truck_one.curr_time or global_time <= truck_two.curr_time:
-            break
-        if len(truck_one.payload.keys) == 0 and len(packages.keys) > 0:
-            if truck_one.curr_location != locations.node_list[0]:
-                truck_one.goto_location(locations.node_list[0])
-            load_truck(truck_one, packages)
-        if len(truck_two.payload.keys) == 0 and len(packages.keys) > 0:
-            if truck_two.curr_location != locations.node_list[0]:
-                truck_two.goto_location(locations.node_list[0])
-            load_truck(truck_two, packages)
-        if truck_one.curr_time <= truck_two.curr_time or len(truck_one.payload.keys) == 1:
-            truck_one.deliver_package()
-        else:
-            truck_two.deliver_package()
-    global global_status_msg
-    if len(packages.keys) == 0 and len(truck_one.payload.keys) == 0 and len(truck_two.payload.keys) == 0:
-        global_status_msg = "All packages delivered on schedule."
-    out_packages = structures.HashTable(40)
-    out_packages.insert_all(truck_one.delivered)
-    out_packages.insert_all(truck_one.payload)
-    out_packages.insert_all(truck_two.delivered)
-    out_packages.insert_all(truck_two.payload)
-    out_packages.insert_all(packages)
-    out_packages.sort_keys("package_id")
-    print(global_status_msg)
-    print("Total miles driven = " + str(truck_one.miles_driven + truck_two.miles_driven))
-    return out_packages
 
 
 # Parse package and location data from CSV files located in the project's root directory.
@@ -116,6 +125,8 @@ def start():
     packages = dataloader.load_package_data("packages_csv.csv")
     locations = dataloader.load_location_data("locations_csv.csv")
     time_input = input("Enter the simulated current time in the 24-hour format HH:MM\n")
+    global global_status_msg
+    global_status_msg = "Status: Some packages are still en route."
     global global_time
     try:
         global_time = int(time_input.split(":")[0]) * 60 + int(time_input.split(":")[1])
@@ -123,11 +134,11 @@ def start():
                 int(time_input.split(":")[0]) < 0 or int(time_input.split(":")[1]) < 0:
             raise ValueError("Time out of range")
     except ValueError:
-        input("Error: Invalid time\nPress ENTER to continue")
+        input("Error: Invalid time\nPress ENTER to continue\n")
         start()
         return None
     except IndexError:
-        input("Error: Invalid time\nPress ENTER to continue")
+        input("Error: Invalid time\nPress ENTER to continue\n")
         start()
         return None
     return simulate_to_curr_time(packages, locations)
@@ -156,5 +167,5 @@ if __name__ == '__main__':
             input("Press ENTER to continue\n")
         elif user_input == "S" or user_input == "s":
             main_packages = start()
-        else:
+        elif user_input != "q" and user_input != "Q":
             input("Error: Invalid input\nPress ENTER to continue\n")

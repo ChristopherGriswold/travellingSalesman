@@ -1,4 +1,5 @@
-# Times are represented internally as the number of minutes since midnight. 480 is representative of 08:00.
+# Times are represented internally as the number of minutes since midnight. 480 and 1200 are representative
+# of 8:00 am and 8:00 pm respectively.
 SHIFT_START_TIME = 480
 SHIFT_END_TIME = 1200
 
