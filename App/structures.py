@@ -154,7 +154,7 @@ class Truck:
     # Time complexity is O(n), where n is the number of packages on board. Auxiliary space complexity is O(1).
     def load(self, package):
         if len(self.payload.keys) < self.MAX_PAYLOAD:
-            package.status = "Out for delivery"
+            package.status = "\033[93mOut for delivery\033[0m"
             self.payload.insert(package.package_id, package)
             return True
         else:
@@ -189,5 +189,5 @@ class Truck:
         self.delivered.insert(package.key, package.value)
         if self.curr_time > local.global_time:
             return
-        package.value.status = "Delivered at: " + str(
-            datetime.time(int(self.curr_time / 60), self.curr_time % 60).strftime("%H:%M"))
+        package.value.status = '\033[92m' + "Delivered at: " + str(
+            datetime.time(int(self.curr_time / 60), self.curr_time % 60).strftime("%H:%M") + '\033[0m')

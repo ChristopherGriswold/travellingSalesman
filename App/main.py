@@ -29,7 +29,8 @@ def simulate_to_curr_time(packages, locations):
             truck_one.deliver_package()
         else:
             truck_two.deliver_package()
-    if len(packages.keys) == 0 and len(truck_one.payload.keys) == 0 and len(truck_two.payload.keys) == 0:
+    if len(packages.keys) == 0 and truck_one.curr_time <= local.global_time \
+            and truck_two.curr_time <= local.global_time:
         local.global_status_msg = "Status: All packages have been delivered on schedule."
     out_packages = structures.HashTable(40)
     out_packages.merge(truck_one.delivered)
