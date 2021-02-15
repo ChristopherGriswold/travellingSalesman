@@ -2,6 +2,10 @@
 # of 8:00 am and 8:00 pm respectively.
 SHIFT_START_TIME = 480
 SHIFT_END_TIME = 1200
+global_time = 0
+
+# The overall status of the day's scheduled deliveries.
+global_status_msg = ""
 
 # Zones are used to group nearby zip codes and get a general idea of their location relative to the HUB.
 # This information can be used to more efficiently load trucks and avoid having packages destined for

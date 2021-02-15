@@ -168,6 +168,8 @@ class Truck:
         self.miles_driven += distance
         if distance > 0:
             self.curr_time += math.ceil((distance / self.AVG_SPEED) * 60)
+        if self.curr_time > local.global_time:
+            self.miles_driven -= distance
 
     # Identifies the package with the nearest delivery address and delivers it. This operation happens
     # in linear O(n) time, where n is the number of packages on board. Auxiliary space complexity is O(1).
@@ -183,9 +185,10 @@ class Truck:
                 self.payload.find(self.payload.keys[closest_key_index]).value.address)
             if dist < self.road_map.adj_matrix[self.curr_location.node_id][next_node_id]:
                 closest_key_index = i
-
         package = self.payload.remove(self.payload.keys[closest_key_index])
         self.goto_location(self.road_map.node_list[self.road_map.find_node_id(package.value.address)])
         self.delivered.insert(package.key, package.value)
+        if self.curr_time > local.global_time:
+            return
         package.value.status = "Delivered at: " + str(
-            datetime.time(int(self.curr_time / 60), (self.curr_time % 60) - 1).strftime("%H:%M"))
+            datetime.time(int(self.curr_time / 60), self.curr_time % 60).strftime("%H:%M"))

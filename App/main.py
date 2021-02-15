@@ -2,11 +2,7 @@
 # Note: Unless otherwise stated, all methods are understood to require constant O(1) time and auxiliary space.
 import structures
 import dataloader
-
-# Variables used throughout the program to represent the simulated current time and
-# the overall status of the day's packages.
-global_time = 0
-global_status_msg = ""
+import local
 
 
 # Orchestrates the entire truck loading and delivery operation. Simulate the passage of time by continuously
@@ -19,7 +15,7 @@ def simulate_to_curr_time(packages, locations):
     truck_one = structures.Truck(1, locations)
     truck_two = structures.Truck(2, locations)
     while len(packages.keys) > 0 or len(truck_one.payload.keys) > 0 or len(truck_two.payload.keys) > 0:
-        if global_time <= truck_one.curr_time or global_time <= truck_two.curr_time:
+        if local.global_time <= truck_one.curr_time and local.global_time <= truck_two.curr_time:
             break
         if len(truck_one.payload.keys) == 0 and len(packages.keys) > 0:
             if truck_one.curr_location != locations.node_list[0]:
@@ -33,9 +29,8 @@ def simulate_to_curr_time(packages, locations):
             truck_one.deliver_package()
         else:
             truck_two.deliver_package()
-    global global_status_msg
     if len(packages.keys) == 0 and len(truck_one.payload.keys) == 0 and len(truck_two.payload.keys) == 0:
-        global_status_msg = "Status: All packages have been delivered on schedule."
+        local.global_status_msg = "Status: All packages have been delivered on schedule."
     out_packages = structures.HashTable(40)
     out_packages.merge(truck_one.delivered)
     out_packages.merge(truck_one.payload)
@@ -43,7 +38,7 @@ def simulate_to_curr_time(packages, locations):
     out_packages.merge(truck_two.payload)
     out_packages.merge(packages)
     out_packages.sort_keys("package_id")
-    print(global_status_msg)
+    print(local.global_status_msg)
     print("Total miles driven = " + str(truck_one.miles_driven + truck_two.miles_driven))
     return out_packages
 
@@ -125,20 +120,17 @@ def start():
     packages = dataloader.load_package_data("packages_csv.csv")
     locations = dataloader.load_location_data("locations_csv.csv")
     time_input = input("Enter the simulated current time in the 24-hour format HH:MM\n")
-    global global_status_msg
-    global_status_msg = "Status: Some packages are still en route."
-    global global_time
+    local.global_status_msg = "Status: Some packages are still en route."
     try:
-        global_time = int(time_input.split(":")[0]) * 60 + int(time_input.split(":")[1])
+        local.global_time = int(time_input.split(":")[0]) * 60 + int(time_input.split(":")[1])
         if int(time_input.split(":")[0]) > 23 or int(time_input.split(":")[1]) > 59 or \
                 int(time_input.split(":")[0]) < 0 or int(time_input.split(":")[1]) < 0:
             raise ValueError("Time out of range")
     except ValueError:
-        input("Error: Invalid time\nPress ENTER to continue\n")
-        start()
-        return None
+        print("Error: Invalid time\n")
+        return start()
     except IndexError:
-        input("Error: Invalid time\nPress ENTER to continue\n")
+        print("Error: Invalid time\n")
         start()
         return None
     return simulate_to_curr_time(packages, locations)
@@ -158,14 +150,14 @@ if __name__ == '__main__':
         if user_input == "L" or user_input == "l":
             user_input = input("Enter a package ID to lookup\n")
             if main_packages.keys.count(user_input) == 0:
-                input("Error: A package with that ID does not exist in the database\nPress ENTER to continue\n")
+                print("Error: A package with that ID does not exist in the database\n")
                 continue
             print(str(main_packages.find(user_input).value))
         elif user_input == "P" or user_input == "p":
             for key in main_packages.keys:
                 print(str(main_packages.find(key).value))
-            input("Press ENTER to continue\n")
+            print("")
         elif user_input == "S" or user_input == "s":
             main_packages = start()
         elif user_input != "q" and user_input != "Q":
-            input("Error: Invalid input\nPress ENTER to continue\n")
+            print("Error: Invalid input\n")
