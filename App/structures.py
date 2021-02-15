@@ -1,6 +1,5 @@
 import local
 import datetime
-import math
 from typing import List
 
 
@@ -167,7 +166,7 @@ class Truck:
         self.curr_location = location
         self.miles_driven += distance
         if distance > 0:
-            self.curr_time += math.ceil((distance / self.AVG_SPEED) * 60)
+            self.curr_time += int(distance / self.AVG_SPEED * 60)
         if self.curr_time > local.global_time:
             self.miles_driven -= distance
 

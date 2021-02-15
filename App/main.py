@@ -52,7 +52,7 @@ def load_truck(truck, packages):
     zone = ""
     while len(packages.keys) > 0:
         if index >= len(packages.keys):
-            if len(packages.keys) > index and packages.find(packages.keys[index]).deadline == 1439 and zone != "":
+            if packages.find(packages.keys[0]).value.deadline == local.SHIFT_END_TIME and zone != "":
                 index = 0
                 zone = ""
                 continue
