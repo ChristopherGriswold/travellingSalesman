@@ -11,6 +11,7 @@ import local
 # delivery operations cease and a full report is made available.
 # Time complexity: O(n). Auxiliary space complexity: O(n).
 def simulate_to_curr_time(packages, locations):
+    num_packages = len(packages.keys)
     packages.sort_keys("deadline")
     truck_one = structures.Truck(1, locations)
     truck_two = structures.Truck(2, locations)
@@ -32,7 +33,7 @@ def simulate_to_curr_time(packages, locations):
     if len(packages.keys) == 0 and truck_one.curr_time <= local.global_time \
             and truck_two.curr_time <= local.global_time:
         local.global_status_msg = "Status: All packages have been delivered on schedule."
-    out_packages = structures.HashTable(40)
+    out_packages = structures.HashTable(num_packages)
     out_packages.merge(truck_one.delivered)
     out_packages.merge(truck_one.payload)
     out_packages.merge(truck_two.delivered)

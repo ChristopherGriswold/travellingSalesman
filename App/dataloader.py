@@ -5,9 +5,9 @@ import structures
 # Return the hash table once the entire file is processed. Time complexity: O(n) where n is the number of
 # lines in the file. Auxiliary space complexity: O(1)
 def load_package_data(filename):
-    package_hash = structures.HashTable(40)
     with open(filename) as package_data:
         lines = package_data.readlines()
+        package_hash = structures.HashTable(len(lines))
         for line in lines:
             package_info = line.split(",")
             package = structures.Package(package_info[0], package_info[1], package_info[2], package_info[3],
